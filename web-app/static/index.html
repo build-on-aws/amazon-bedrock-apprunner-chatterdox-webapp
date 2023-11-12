@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chatterdox</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .input-container {
+            margin: 10px 0;
+        }
+
+        input,
+        button {
+            width: 100%;
+            max-width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #confirmationMessage {
+            margin-top: 10px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        #chatContainer {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .userMessage,
+        .serverMessage {
+            background-color: #e6e6e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .userMessage {
+            text-align: right;
+            background-color: #7890aa;
+            color: #fff;
+            position: relative;
+        }
+
+        #chatInput,
+        #chatButton {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        #loadingSpinner {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            margin: 0 auto;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #34db8d;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Chatterdox</h1>
+
+        <div class="input-container">
+            <input type="text" id="dataInput" placeholder="Enter a URL and start chatting!">
+            <button id="submitButton">Submit</button>
+        </div>
+
+        <p id="confirmationMessage"></p>
+
+        <div id="chatContainer">
+            <div class="userMessage" id="userMessage">
+                <input type="text" id="chatInput" placeholder="Enter a message">
+                <button id="chatButton">Send</button>
+                <div id="loadingSpinner"></div> <!-- Loading Spinner -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const submitButton = document.getElementById("submitButton");
+            const loadingSpinner = document.getElementById("loadingSpinner"); // Get the spinner element
+            const dataInput = document.getElementById("dataInput");
+            const confirmationMessage = document.getElementById("confirmationMessage");
+            const chatInput = document.getElementById("chatInput");
+            const chatButton = document.getElementById("chatButton");
+            const chatContainer = document.getElementById("chatContainer");
+            const userMessage = document.getElementById("userMessage");
+            //const backendAPIUrl = "http://localhost:8080/upload"; // Replace with your actual backend API URL
+            //const chatAPIUrl = "http://localhost:8080/chat"; // Replace with your actual backend API URL
+            const backendAPIUrl = "/upload"; // Replace with your actual backend API URL
+            const chatAPIUrl = "/chat"; // Replace with your actual backend API URL
+            let chatEnabled = false; // Flag to track chat enablement
+
+            submitButton.addEventListener("click", async () => {
+                const inputData = dataInput.value;
+
+                if (inputData) {
+                    loadingSpinner.style.display = "inline-block";
+
+                    try {
+                        const response = await postDataToBackend(inputData);
+
+                        loadingSpinner.style.display = "none";
+
+                        if (response.status == 200) {
+                            userMessage.style.display = "block";
+                            enableChat(); // Enable the chat input and button
+                        } else {
+                            confirmationMessage.textContent = "Data upload failed.";
+                        }
+                    } catch (error) {
+                        console.error("Error:", error);
+                        confirmationMessage.textContent = "An error occurred while communicating with the server.";
+                        loadingSpinner.style.display = "none"; // Hide the spinner on error
+                    }
+                } else {
+                    confirmationMessage.textContent = "Please enter some data before submitting.";
+                }
+            });
+
+            chatButton.addEventListener("click", async () => {
+                const chatMessage = chatInput.value;
+
+                if (chatMessage) {
+                    loadingSpinner.style.display = "inline-block";
+
+                    appendUserMessage(chatMessage);
+                    try {
+                        const response = await postChatMessage(chatMessage);
+
+                        // Hide the loading spinner when the response is received
+                        loadingSpinner.style.display = "none";
+
+                        appendServerMessage(response);
+                    } catch (error) {
+                        console.error("Error:", error);
+                        loadingSpinner.style.display = "none"; // Hide the spinner on error
+                    }
+                    chatInput.value = "";
+                }
+            });
+
+            async function postDataToBackend(data) {
+                try {
+                    return await fetch(backendAPIUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/plain",
+                        },
+                        body: data,
+                    });
+                } catch (error) {
+                    throw error;
+                }
+            }
+
+            async function postChatMessage(message) {
+                try {
+                    const response = await fetch(chatAPIUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/plain",
+                        },
+                        body: message,
+                    });
+
+                    if (response.ok) {
+                        return await response.text();
+                    } else {
+                        throw new Error("Network response was not ok.");
+                    }
+                } catch (error) {
+                    throw error;
+                }
+            }
+
+            function appendUserMessage(message) {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = "userMessage";
+                messageDiv.textContent = message;
+                chatContainer.appendChild(messageDiv);
+            }
+
+            function appendServerMessage(message) {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = "serverMessage";
+                messageDiv.textContent = message;
+                chatContainer.appendChild(messageDiv);
+            }
+
+            function enableChat() {
+                chatEnabled = true;
+                chatInput.style.pointerEvents = "auto";
+                chatButton.style.pointerEvents = "auto";
+                chatInput.style.opacity = 1;
+                chatButton.style.opacity = 1;
+            }
+        });
+    </script>
+</body>
+
+</html>
