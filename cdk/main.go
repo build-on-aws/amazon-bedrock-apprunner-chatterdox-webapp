@@ -26,7 +26,7 @@ func main() {
 	app.Synth(nil)
 }
 
-const appDir = "../chatterdox-web-app"
+const appDir = "../web-app"
 
 func ChatterdoxStack(scope constructs.Construct, id string, props *ChatterdoxStackProps) awscdk.Stack {
 	var sprops awscdk.StackProps
@@ -51,7 +51,7 @@ func ChatterdoxStack(scope constructs.Construct, id string, props *ChatterdoxSta
 
 	app := awscdkapprunneralpha.NewService(stack, jsii.String("chatterdox_app"),
 		&awscdkapprunneralpha.ServiceProps{
-			ServiceName: jsii.String("chatterdox"),
+			ServiceName: jsii.String("chatterdocs"),
 			Source: awscdkapprunneralpha.NewAssetSource(
 				&awscdkapprunneralpha.AssetProps{
 					ImageConfiguration: &awscdkapprunneralpha.ImageConfiguration{
